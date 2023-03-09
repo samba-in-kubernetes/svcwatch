@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Executes svcwatch process.
 package main
 
 import (
@@ -21,12 +22,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	goruntime "runtime"
 	"syscall"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	//"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -36,6 +39,11 @@ import (
 )
 
 var (
+	// Version of the software at compile time.
+	Version = "(unset)"
+	// CommitID in the git revision used at compile time.
+	CommitID = "(unset)"
+
 	destPath      = "/var/lib/svcwatch/status.json"
 	svcLabelKey   = ""
 	svcLabelValue = ""
@@ -81,6 +89,13 @@ func main() {
 		fmt.Printf("failed to set up logger\n")
 		os.Exit(2)
 	}
+
+	l.Info("Initializing service watcher",
+		zap.Any("ProgramName", os.Args[0]),
+		zap.Any("Version", Version),
+		zap.Any("CommitID", CommitID),
+		zap.Any("GoVersion", goruntime.Version()),
+	)
 
 	kubeconfig := os.Getenv("KUBECONFIG")
 	l.Info("Starting service watcher. Params:",
