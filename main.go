@@ -89,7 +89,7 @@ func main() {
 	l, err := zap.NewDevelopment()
 	if err != nil {
 		fmt.Printf("failed to set up logger\n")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	l.Info("Initializing service watcher",
@@ -110,7 +110,7 @@ func main() {
 	clientset, err := newClientset()
 	if err != nil {
 		l.Error("failed to create clientset", zap.Error(err))
-		os.Exit(1)
+		os.Exit(2)
 	}
 
 	sel := fmt.Sprintf("%s=%s", svcLabelKey, svcLabelValue)
@@ -119,7 +119,7 @@ func main() {
 		metav1.ListOptions{LabelSelector: sel})
 	if err != nil {
 		l.Error("failed to create watch", zap.Error(err))
-		os.Exit(1)
+		os.Exit(3)
 	}
 
 	errors := make(chan error, 1)
