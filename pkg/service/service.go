@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package service implements service-watch probe
 package service
 
 import (
@@ -67,4 +68,3 @@ func Updated(prev sf.HostState, svc *corev1.Service, nameLabel string) (
 	newh := ToHostState(svc, nameLabel)
 	return newh, prev.Differs(newh)
 }
-
