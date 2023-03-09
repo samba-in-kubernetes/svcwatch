@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	goruntime "runtime"
 	"syscall"
 
@@ -32,6 +33,7 @@ import (
 
 	//"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/samba-in-kubernetes/svcwatch/pkg/service"
@@ -97,21 +99,19 @@ func main() {
 		zap.Any("GoVersion", goruntime.Version()),
 	)
 
-	kubeconfig := os.Getenv("KUBECONFIG")
 	l.Info("Starting service watcher. Params:",
 		zap.Any("destination path", destPath),
 		zap.Any("label key", svcLabelKey),
 		zap.Any("label value to match", svcLabelValue),
 		zap.Any("svcNamespace", svcNamespace),
-		zap.Any("KUBECONFIG", kubeconfig),
+		zap.Any("KUBECONFIG", os.Getenv("KUBECONFIG")),
 	)
 
-	kcfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	clientset, err := newClientset()
 	if err != nil {
-		l.Error("failed to create watch", zap.Error(err))
+		l.Error("failed to create clientset", zap.Error(err))
 		os.Exit(1)
 	}
-	clientset := kubernetes.NewForConfigOrDie(kcfg)
 
 	sel := fmt.Sprintf("%s=%s", svcLabelKey, svcLabelValue)
 	w, err := clientset.CoreV1().Services(svcNamespace).Watch(
@@ -155,4 +155,28 @@ func main() {
 	close(updates)
 	close(errors)
 	w.Stop()
+}
+
+func newClientset() (*kubernetes.Clientset, error) {
+	cfg, err := getClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(cfg)
+}
+
+func getClusterConfig() (*rest.Config, error) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		cfg, err = buildOutOfClusterConfig()
+	}
+	return cfg, err
+}
+
+func buildOutOfClusterConfig() (*rest.Config, error) {
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+	if kubeconfigPath == "" {
+		kubeconfigPath = filepath.Join(os.Getenv("HOME"), ".kube/config")
+	}
+	return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 }
